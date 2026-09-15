@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # ================= TELEGRAM CREDENTIALS =================
-BOT_TOKEN = "8547801130:AAHbchveH__VVw8kq6rDYhvxc8nd62VWITw" 
+BOT_TOKEN = "8547801130:AAFWBuKPndjHRIVRMz1P_J2F5C0PtN3XFQ4" 
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
