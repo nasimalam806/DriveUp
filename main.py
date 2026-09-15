@@ -10,23 +10,26 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # ================= TELEGRAM CREDENTIALS =================
-# Dhyan rahe: Agar aapne pichla token revoke (delete) kar diya tha, toh naya token yahan daalein.
 BOT_TOKEN = "8547801130:AAHbchveH__VVw8kq6rDYhvxc8nd62VWITw" 
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
 DRIVE_FOLDER_ID = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
 
+# ================= WEBHOOK URLs (Admin Panel se match karein) =================
+# Yahan apne Webhook URLs daalein, agar hain toh
+APP_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqjzqyLNDavnrkBzracrX7a4WEF48wEVVGItXK2234EB2ROq_oEKo1ytLDQfhEGKDUio828gkayIVKI7_sXaeEC1CdTI7efWde1QDYdGGObh75dwSknt16LxwLjzAykqavOU4UFoXDOZeWRJsUKSFOSbD1flwXpPHZcSYpINz7IyqxqcvRLCeeU2oFFbX1NAYC0KvFUb25YiI-QMZxwEX9WAhxFA%3D%3D" 
+BOOK_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqj9SrqSkD8sQnaW3Tx12hEwvoEv4Kw3yGmZABailfSsXmYlgJcf5YIdMEJj81-QADwB6CxF1AhVL6KsWERs8Eby7Z9F2HbGyBsdak57LWs6eHHkNZnOGxXJWlUCPuPpnB73mKTaHed1Kd2CpY3vH6NeMiHEN_or5F-RqprsxtxiZ8XiG_wldjhhpzRk51y62N3yS5vEpqmQJ6-8YI-fgLUApLwg%3D%3D" 
+
 # ================= DRIVE SETUP (OAUTH 2.0) =================
 def get_drive_service():
     scopes = ['https://www.googleapis.com/auth/drive']
-    # Ab hum token.json use kar rahe hain, credentials.json nahi!
     creds = Credentials.from_authorized_user_file('token.json', scopes)
     return build('drive', 'v3', credentials=creds)
-# 👇 YAHAN SE CHANGE SHURU 👇
-# Hum "in_memory=True" add kar rahe hain. Ab session file nahi banegi!
+
 app = Client(":memory:", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
-# 👆 CHANGE KHATAM 👆# ================= START COMMAND =================
+
+# ================= START COMMAND =================
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
     welcome_text = (
@@ -49,8 +52,18 @@ async def handle_document(client, message):
         extension = "." + original_name.split(".")[-1]
         
     caption = message.caption if message.caption else None
-    final_name = (caption + extension) if caption else original_name
+    temp_name = (caption + extension) if caption else original_name
     
+    # ================= AUTOMATIC RENAME LOGIC =================
+    is_book = ".pdf" in original_name.lower() or ".epub" in original_name.lower()
+    base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
+    
+    if is_book:
+        final_name = f"{base_name_without_ext} @BooksBunch{extension}"
+    else:
+        final_name = f"{base_name_without_ext} @FullModApk{extension}"
+    # ==========================================================
+
     # 2. Download File to Server (Railway)
     file_path = await message.download(
         progress=lambda current, total: update_progress(msg, current, total, "Downloading to server")
@@ -91,9 +104,9 @@ async def handle_document(client, message):
     await msg.edit_text("✅ Drive Upload Done! Fetching AI Details & Publishing...")
 
     # 4. AI Logic (Fetch Metadata and Images)
-    is_book = ".pdf" in original_name.lower() or ".epub" in original_name.lower()
     file_type = "book" if is_book else "app"
-    base_name = final_name.rsplit('.', 1)[0].strip()
+    # AI ke liye tag hata dete hain taki result aacha aaye
+    ai_search_name = base_name_without_ext 
     
     thumbnail_url = ""
     screenshots = []
@@ -101,13 +114,13 @@ async def handle_document(client, message):
     # --- Image Fetching ---
     try:
         if is_book:
-            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(base_name)}&entity=ebook&limit=1").json()
+            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(ai_search_name)}&entity=ebook&limit=1").json()
             if itunes_res.get("results"):
                 thumb = itunes_res["results"][0].get("artworkUrl512") or itunes_res["results"][0].get("artworkUrl100")
                 if thumb: thumbnail_url = thumb.replace("100x100bb", "1000x1000bb").replace("512x512bb", "1000x1000bb")
             
             if not thumbnail_url:
-                gbooks_res = requests.get(f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(base_name)}&maxResults=1").json()
+                gbooks_res = requests.get(f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(ai_search_name)}&maxResults=1").json()
                 if gbooks_res.get("items") and gbooks_res["items"][0].get("volumeInfo", {}).get("imageLinks"):
                     thumbnail_url = gbooks_res["items"][0]["volumeInfo"]["imageLinks"].get("thumbnail", "")
                     thumbnail_url = thumbnail_url.replace("http:", "https:").replace("&edge=curl", "").replace("zoom=1", "zoom=0")
@@ -115,7 +128,7 @@ async def handle_document(client, message):
             if not thumbnail_url: thumbnail_url = "https://placehold.co/500x500?text=No+Cover"
             screenshots.append(thumbnail_url)
         else:
-            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(base_name)}&entity=software&limit=1").json()
+            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(ai_search_name)}&entity=software&limit=1").json()
             if itunes_res.get("results"):
                 item = itunes_res["results"][0]
                 thumb = item.get("artworkUrl512") or item.get("artworkUrl100")
@@ -136,8 +149,8 @@ async def handle_document(client, message):
     cat_list_str = valid_cats_book if is_book else valid_cats_app
     type_text_display = "book" if is_book else "app"
     
-    desc_prompt = f'Write a short, engaging, and SEO friendly book summary/description for the book named: "{base_name}". Return strictly in plain text without any markdown symbols like asterisks (**).' if is_book else f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {base_name}. Return strictly in plain text without any markdown symbols like asterisks (**).'
-    cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the {type_text_display} named: {base_name}. Return ONLY the exact category name from the list, no extra text.'
+    desc_prompt = f'Write a short, engaging, and SEO friendly book summary/description for the book named: "{ai_search_name}". Return strictly in plain text without any markdown symbols like asterisks (**).' if is_book else f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {ai_search_name}. Return strictly in plain text without any markdown symbols like asterisks (**).'
+    cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the {type_text_display} named: {ai_search_name}. Return ONLY the exact category name from the list, no extra text.'
 
     raw_desc = "Generated description."
     category = "Books" if is_book else "Apps"
@@ -163,7 +176,8 @@ async def handle_document(client, message):
     
     payload = {
         "fields": {
-            "title": {"stringValue": base_name},
+            # Title mein ab tag shamil rahega
+            "title": {"stringValue": final_name.rsplit('.', 1)[0]},
             "type": {"stringValue": file_type},
             "status": {"stringValue": "live"},
             "thumbnailUrl": {"stringValue": thumbnail_url},
@@ -181,8 +195,29 @@ async def handle_document(client, message):
 
     try:
         fb_res = requests.post(firestore_url, json=payload)
+        
         if fb_res.status_code == 200:
+            doc_id = fb_res.json().get('name').split('/')[-1]
             await msg.edit_text(f"✅ *Upload & Auto-Publish Successful!*\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
+            
+            # ================= WEBHOOK TRIGGER LOGIC =================
+            target_webhook = BOOK_WEBHOOK_URL if is_book else APP_WEBHOOK_URL
+            
+            if target_webhook:
+                webhook_payload = {
+                    "title": final_name.rsplit('.', 1)[0],
+                    "profilePicture": thumbnail_url,
+                    "description": final_description,
+                    "category": category,
+                    "downloadLink": f"https://filevix.blogspot.com/?id={doc_id}",
+                    "author": ""
+                }
+                try:
+                    requests.post(target_webhook, json=webhook_payload)
+                except Exception as e:
+                    print(f"Webhook Failed: {e}")
+            # ==========================================================
+            
         else:
             await msg.edit_text(f"⚠️ Drive Uploaded, but Website Publish Failed.\nError: {fb_res.text}\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
