@@ -11,7 +11,7 @@ from googleapiclient.http import MediaFileUpload
 
 # ================= TELEGRAM CREDENTIALS =================
 # Dhyan rahe: Agar aapne pichla token revoke (delete) kar diya tha, toh naya token yahan daalein.
-BOT_TOKEN = "8067333157:AAGrEAEeYqKX4CFyT0nOzNvJYi69dSSSrQs" 
+BOT_TOKEN = "8067333157:AAHswWyLy7hX6PpvU7GXdfEGigFB8ShyPoY" 
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
