@@ -23,10 +23,10 @@ def get_drive_service():
     # Ab hum token.json use kar rahe hain, credentials.json nahi!
     creds = Credentials.from_authorized_user_file('token.json', scopes)
     return build('drive', 'v3', credentials=creds)
-
-app = Client("filevix_bot_2", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# ================= START COMMAND =================
+# 👇 YAHAN SE CHANGE SHURU 👇
+# Hum "in_memory=True" add kar rahe hain. Ab session file nahi banegi!
+app = Client(":memory:", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
+# 👆 CHANGE KHATAM 👆# ================= START COMMAND =================
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
     welcome_text = (
