@@ -20,8 +20,7 @@ DRIVE_FOLDER_BOOKS = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
 # Apps/Games (APKs) ke liye folder
 DRIVE_FOLDER_APPS = "1WFPmfn2vYilb5E0wji1nvt-gOXxrn7YF"
 
-# ================= WEBHOOK URLs (Admin Panel se match karein) =================
-# Yahan apne Webhook URLs daalein, agar hain toh
+# ================= WEBHOOK URLs =================
 APP_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqjzqyLNDavnrkBzracrX7a4WEF48wEVVGItXK2234EB2ROq_oEKo1ytLDQfhEGKDUio828gkayIVKI7_sXaeEC1CdTI7efWde1QDYdGGObh75dwSknt16LxwLjzAykqavOU4UFoXDOZeWRJsUKSFOSbD1flwXpPHZcSYpINz7IyqxqcvRLCeeU2oFFbX1NAYC0KvFUb25YiI-QMZxwEX9WAhxFA%3D%3D" 
 BOOK_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqj9SrqSkD8sQnaW3Tx12hEwvoEv4Kw3yGmZABailfSsXmYlgJcf5YIdMEJj81-QADwB6CxF1AhVL6KsWERs8Eby7Z9F2HbGyBsdak57LWs6eHHkNZnOGxXJWlUCPuPpnB73mKTaHed1Kd2CpY3vH6NeMiHEN_or5F-RqprsxtxiZ8XiG_wldjhhpzRk51y62N3yS5vEpqmQJ6-8YI-fgLUApLwg%3D%3D" 
 
@@ -40,7 +39,8 @@ async def start_command(client, message):
         "🚀 **Welcome to FileVix Pro Uploader!**\n\n"
         "Main aapki badi files (up to 2GB) seedha Google Drive me upload kar sakta hu aur unko automatic AI details ke sath Website par publish kar sakta hu.\n\n"
         "**Kaise use karein?**\n"
-        "Bas mujhe koi bhi APK ya PDF file bhejein, aur main baaki ka sara kaam khud sambhal lunga! 🔥"
+        "Bas mujhe koi bhi APK ya PDF file bhejein, aur main baaki ka sara kaam khud sambhal lunga!\n\n"
+        "*(Tip: Agar Book upload kar rahe hain, toh caption me pehli line me Book Name aur dusri line me Author Name likhein)* 🔥"
     )
     await message.reply_text(welcome_text, parse_mode=ParseMode.MARKDOWN)
 
@@ -49,18 +49,37 @@ async def start_command(client, message):
 async def handle_document(client, message):
     msg = await message.reply_text("⏳ Downloading file to server (0%)...")
     
-    # 1. Names and Extensions
+    # 1. Extensions
     original_name = message.document.file_name
     extension = ""
     if "." in original_name:
         extension = "." + original_name.split(".")[-1]
-        
-    caption = message.caption if message.caption else None
-    temp_name = (caption + extension) if caption else original_name
     
+    # ================= CAPTION & AUTHOR LOGIC =================
+    raw_caption = message.caption if message.caption else ""
+    parsed_book_name = ""
+    parsed_author_name = ""
+
+    if raw_caption:
+        # Split caption by newlines (\n)
+        lines = [line.strip() for line in raw_caption.split('\n') if line.strip()]
+        if len(lines) > 1:
+            # Last line becomes Author, everything above it becomes Book Name
+            parsed_author_name = lines[-1]
+            parsed_book_name = " ".join(lines[:-1])
+        else:
+            parsed_book_name = lines[0] if lines else ""
+
+    temp_name = parsed_book_name if parsed_book_name else original_name
+
     # ================= AUTOMATIC RENAME & FOLDER LOGIC =================
     is_book = ".pdf" in original_name.lower() or ".epub" in original_name.lower()
-    base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
+    
+    # Agar temp_name mein extension aa gaya hai toh usko hatao
+    if temp_name.lower().endswith(extension.lower()):
+        base_name_without_ext = temp_name[:-len(extension)].strip()
+    else:
+        base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
     
     if is_book:
         final_name = f"{base_name_without_ext} @BooksBunch{extension}"
@@ -80,7 +99,6 @@ async def handle_document(client, message):
     # 3. Upload to Google Drive
     try:
         drive_service = get_drive_service()
-        # Yahan target_folder_id set kar diya hai dynamically
         file_metadata = {'name': final_name, 'parents': [target_folder_id]}
         media = MediaFileUpload(file_path, resumable=True)
         
@@ -112,22 +130,26 @@ async def handle_document(client, message):
 
     # 4. AI Logic (Fetch Metadata and Images)
     file_type = "book" if is_book else "app"
-    # AI ke liye tag hata dete hain taki result aacha aaye
     ai_search_name = base_name_without_ext 
     
+    # AI Search Prompt ke liye Author ko jodo
+    ai_query_string = ai_search_name
+    if is_book and parsed_author_name:
+        ai_query_string += f" {parsed_author_name}"
+        
     thumbnail_url = ""
     screenshots = []
     
     # --- Image Fetching ---
     try:
         if is_book:
-            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(ai_search_name)}&entity=ebook&limit=1").json()
+            itunes_res = requests.get(f"https://itunes.apple.com/search?term={urllib.parse.quote(ai_query_string)}&entity=ebook&limit=1").json()
             if itunes_res.get("results"):
                 thumb = itunes_res["results"][0].get("artworkUrl512") or itunes_res["results"][0].get("artworkUrl100")
                 if thumb: thumbnail_url = thumb.replace("100x100bb", "1000x1000bb").replace("512x512bb", "1000x1000bb")
             
             if not thumbnail_url:
-                gbooks_res = requests.get(f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(ai_search_name)}&maxResults=1").json()
+                gbooks_res = requests.get(f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(ai_query_string)}&maxResults=1").json()
                 if gbooks_res.get("items") and gbooks_res["items"][0].get("volumeInfo", {}).get("imageLinks"):
                     thumbnail_url = gbooks_res["items"][0]["volumeInfo"]["imageLinks"].get("thumbnail", "")
                     thumbnail_url = thumbnail_url.replace("http:", "https:").replace("&edge=curl", "").replace("zoom=1", "zoom=0")
@@ -156,8 +178,18 @@ async def handle_document(client, message):
     cat_list_str = valid_cats_book if is_book else valid_cats_app
     type_text_display = "book" if is_book else "app"
     
-    desc_prompt = f'Write a short, engaging, and SEO friendly book summary/description for the book named: "{ai_search_name}". Return strictly in plain text without any markdown symbols like asterisks (**).' if is_book else f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {ai_search_name}. Return strictly in plain text without any markdown symbols like asterisks (**).'
-    cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the {type_text_display} named: {ai_search_name}. Return ONLY the exact category name from the list, no extra text.'
+    # Text Prompts mein bhi Author ka use kiya gaya hai agar available ho
+    if is_book:
+        desc_prompt = f'Write a short, engaging, and SEO friendly book summary/description for the book named: "{ai_search_name}"'
+        if parsed_author_name: desc_prompt += f' written by {parsed_author_name}'
+        desc_prompt += '. Return strictly in plain text without any markdown symbols like asterisks (**).'
+        
+        cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the book named: "{ai_search_name}"'
+        if parsed_author_name: cat_prompt += f' by {parsed_author_name}'
+        cat_prompt += '. Return ONLY the exact category name from the list, no extra text.'
+    else:
+        desc_prompt = f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {ai_search_name}. Return strictly in plain text without any markdown symbols like asterisks (**).'
+        cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the {type_text_display} named: {ai_search_name}. Return ONLY the exact category name from the list, no extra text.'
 
     raw_desc = "Generated description."
     category = "Books" if is_book else "Apps"
@@ -183,7 +215,6 @@ async def handle_document(client, message):
     
     payload = {
         "fields": {
-            # Title mein ab tag shamil rahega
             "title": {"stringValue": final_name.rsplit('.', 1)[0]},
             "type": {"stringValue": file_type},
             "status": {"stringValue": "live"},
@@ -192,13 +223,17 @@ async def handle_document(client, message):
             "downloadUrl": {"stringValue": drive_link},
             "description": {"stringValue": final_description},
             "categories": {"arrayValue": {"values": [{"stringValue": category}]}},
-            "requiredAds": {"integerValue": "1"},
-            "adType": {"stringValue": "monetag"},
+            "requiredAds": {"integerValue": "3"},
+            "adType": {"stringValue": "adsgram"},
             "downloads": {"integerValue": "0"},
             "createdAt": {"timestampValue": datetime.utcnow().isoformat() + "Z"},
             "botSecret": {"stringValue": "FileVixBot@2024!"}
         }
     }
+    
+    # Agar author name hai toh usko bhi Firebase mein save karein
+    if parsed_author_name:
+        payload["fields"]["author"] = {"stringValue": parsed_author_name}
 
     try:
         fb_res = requests.post(firestore_url, json=payload)
@@ -217,7 +252,7 @@ async def handle_document(client, message):
                     "description": final_description,
                     "category": category,
                     "downloadLink": f"https://filevix.blogspot.com/?id={doc_id}",
-                    "author": ""
+                    "author": parsed_author_name # Webhook me bhi author add kar diya
                 }
                 try:
                     requests.post(target_webhook, json=webhook_payload)
@@ -233,7 +268,6 @@ async def handle_document(client, message):
 # ================= PROGRESS BAR HELPER =================
 async def update_progress(message, current, total, text):
     percent = round((current / total) * 100)
-    # Update message every 10% to avoid Telegram rate limits
     if percent % 10 == 0:
         try:
             await message.edit_text(f"⏳ {text} ({percent}%)...")
