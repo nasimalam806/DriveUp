@@ -24,6 +24,23 @@ def get_drive_service():
 
 app = Client("filevix_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# 👇 YEH NAYA FUNCTION ADD KAREIN 👇
+@app.on_message(filters.command("start"))
+async def start_command(client, message):
+    welcome_text = (
+        "🚀 **Welcome to FileVix Pro Uploader!**\n\n"
+        "Main aapki badi files (up to 2GB) seedha Google Drive me upload kar sakta hu aur unko automatic AI details ke sath Website par publish kar sakta hu.\n\n"
+        "**Kaise use karein?**\n"
+        "Bas mujhe koi bhi APK ya PDF file bhejein, aur main baaki ka sara kaam khud sambhal lunga! 🔥"
+    )
+    await message.reply_text(welcome_text, parse_mode="Markdown")
+# 👆 YAHAN TAK 👆
+
+@app.on_message(filters.document)
+async def handle_document(client, message):
+# ... baaki ka aapka upload wala code same rahega ...
+
+
 @app.on_message(filters.document)
 async def handle_document(client, message):
     msg = await message.reply_text("⏳ Downloading file to server (0%)...")
