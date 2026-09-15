@@ -9,7 +9,7 @@ from googleapiclient.http import MediaFileUpload
 import urllib.parse
 
 # ================= CREDENTIALS =================
-BOT_TOKEN = "8454996198:AAHJa_L0fEXv29AmES6wxUEeB2a_CaOQSqk"
+BOT_TOKEN = "8067333157:AAGrEAEeYqKX4CFyT0nOzNvJYi69dSSSrQs"
 API_ID = 30072361  # Yahan apna API ID daalein
 API_HASH = "89172ae56cce451a933e4aa2557c1721" # Yahan apna API HASH daalein
 
