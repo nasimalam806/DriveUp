@@ -14,7 +14,11 @@ BOT_TOKEN = "8547801130:AAHbchveH__VVw8kq6rDYhvxc8nd62VWITw"
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
-DRIVE_FOLDER_ID = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
+# ================= SEPARATE DRIVE FOLDERS =================
+# Books (PDFs) ke liye folder
+DRIVE_FOLDER_BOOKS = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
+# Apps/Games (APKs) ke liye folder
+DRIVE_FOLDER_APPS = "1WFPmfn2vYilb5E0wji1nvt-gOXxrn7YF"
 
 # ================= WEBHOOK URLs (Admin Panel se match karein) =================
 # Yahan apne Webhook URLs daalein, agar hain toh
@@ -54,14 +58,16 @@ async def handle_document(client, message):
     caption = message.caption if message.caption else None
     temp_name = (caption + extension) if caption else original_name
     
-    # ================= AUTOMATIC RENAME LOGIC =================
+    # ================= AUTOMATIC RENAME & FOLDER LOGIC =================
     is_book = ".pdf" in original_name.lower() or ".epub" in original_name.lower()
     base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
     
     if is_book:
         final_name = f"{base_name_without_ext} @BooksBunch{extension}"
+        target_folder_id = DRIVE_FOLDER_BOOKS
     else:
         final_name = f"{base_name_without_ext} @FullModApk{extension}"
+        target_folder_id = DRIVE_FOLDER_APPS
     # ==========================================================
 
     # 2. Download File to Server (Railway)
@@ -74,7 +80,8 @@ async def handle_document(client, message):
     # 3. Upload to Google Drive
     try:
         drive_service = get_drive_service()
-        file_metadata = {'name': final_name, 'parents': [DRIVE_FOLDER_ID]}
+        # Yahan target_folder_id set kar diya hai dynamically
+        file_metadata = {'name': final_name, 'parents': [target_folder_id]}
         media = MediaFileUpload(file_path, resumable=True)
         
         uploaded_file = drive_service.files().create(
