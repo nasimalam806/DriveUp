@@ -10,20 +10,38 @@ from googleapiclient.http import MediaFileUpload
 import urllib.parse
 
 # ================= CREDENTIALS =================
-BOT_TOKEN = "8067333157:AAGrEAEeYqKX4CFyT0nOzNvJYi69dSSSrQs"
+BOT_TOKEN = "8067333157:AAHswWyLy7hX6PpvU7GXdfEGigFB8ShyPoY"
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
 DRIVE_FOLDER_ID = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
-SERVICE_ACCOUNT_FILE = "credentials.json"
+
+# ================= JSON DIRECT INJECTION =================
+# 👇 JSON FILE KE ANDAR KA PURA CODE COPY KARKE YAHAN PASTE KAREIN 👇
+SERVICE_ACCOUNT_INFO = {
+  "type": "service_account",
+  "project_id": "gdriveuploader-508707",
+  "private_key_id": "928f2b5be72d023948f1eb47a407bd63fdc4e11f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDTJfG6j6QwuBGM\n5jx9h8IIgtQRSX9Jlv84n9Q5N6h6ef50vgYa283XSJJenACaAFsV2urQJDjNE9DJ\nMVrUQTCcFneQwG1+uWgTeFDVENHP5abTmcP4v2POkaj3DwMMniCmRM1quZ7xG2vW\n2qcMwjD+vH/1Ui0cb4rtTYRL/tSW4OFMDwL0wf61HKd5P+9eeit0hdjEc9tc2hO7\nh99Ok92bWsdovajBL5vJZZ6K8jAqiSCm2NieEyz7wL5yQJj8Vb2sWGc45duzZlmU\nFyPZiiIkYGKzOg6wqxqB+Vt5oAI3U9lsh9MlUCcotzTYCULUhYLSzs+inEeLXvFz\nwPHIUxppAgMBAAECggEAIPVYiuAuhxtIRAfRM9/7wdPYEd241G4RJw/NsuO09O8z\ncJoTvmAGfJ77l/B+aIt7LEloYzZwNlSsP6doT97gHVEldy8OOFxs+jMK3QM72Nl2\nRavICv0m8WDLsMrDVVYebw2oycqxHF4FInutXSC3wJ+AUrTxzTE9DIcPykP7/5PQ\nWbRGfCEOsES4ONZr4D99kYSsIuW6U7Zbe0mwY29fYDmAstwvu0IGuuHRKVDIR6MM\nYQUT0TPGnKMLG/vV+ZpeLtGIFTSWD78FUiA+XbgZj36D8f/yF6hx3LlTXHbV7Coz\nE4wukIo18ergAapHaVVZXL6+++Hf9B/IIt86duQQPQKBgQD54pOeJ2HePm+yfN+t\nnqdI1xKBlw5PUbNQ4zotlqMFzxgodaInvaBdMdDQFb2nWO06shB6Kzm5ZwORDulq\nU/uUXzbfPwl5n/dZUWC7s1qNH8nRPi9MHyXIMeF+wJFZsS08n1L/wgvh2+y8riyb\n50WeIRIUqq/zpgA6Jln3U6ftXQKBgQDYULKjWTbj3Q/H+HmKD6tmeMhnL3O+Psxq\nc+x64RgeRbKEHRvNTd1vgYBykAIps1oLYSLQRKA2GlgFFz2h+X5b8oQjecp7x+S3\nmMDXrJo+j25194AWcYzkH5PT8cC6FD8LHksmymtXaJxZocf0VSp0WSVV6Genv6ny\ng5dUsW3EfQKBgEqv0fc/Rh0rBC+Q6zn1ZYJ75egdwgUrIjFW+RiPIYKm902Ae0rt\nfnTcYtEO7nSKO72DYzFgogwsIgDFODazi0o5eykWqjpT+ZYUoJj5bmMn0SZdM73I\nwX4oioFcBRWNwzuPUztmQC7tkMCEPokKguBUehb7PUPRpde7hsBJnLNxAoGAAvop\nW0IxFTXHr9LlqVbJ3yEucO0gRLAMlDKAQLi0YkZHTLYx2cOGlrBLmkgNH5HOXXW6\nyu8G3XfDWl6VhJMwgAd4dhyJAucfaL97d/xyKwZCWPFNHAH4FHOyzyn2oxkAPSDv\nm9sRWySfckRdwikh6nQHpYULWC21IxdYj9vZTOkCgYEAphVnGlSZ6DxHycMAH7Bm\nW5XY+Ebl+5vPiZyzm47c5qyU4NEJxYWnAazOgm442wdr2kGmUlpIL6Ybt0ZP4GCR\n7QPFed7qotdVyi/OUVtl1vy7CycWOO/5V2vYrIqoraS0h17ZGZdS32AsQSIaxqgZ\n4dhsFAkERMqSOVp2wdCg4/8=\n-----END PRIVATE KEY-----\n",
+  "client_email": "gdriveuploader@gdriveuploader-508707.iam.gserviceaccount.com",
+  "client_id": "108763390518374197711",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gdriveuploader%40gdriveuploader-508707.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+# 👆 YAHAN TAK 👆
 
 # ================= DRIVE SETUP =================
 def get_drive_service():
     scopes = ['https://www.googleapis.com/auth/drive']
-    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scopes)
+    # Dhyan dein: Yahan ab hum info() use kar rahe hain, file() nahi
+    creds = Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=scopes)
     return build('drive', 'v3', credentials=creds)
 
 app = Client("filevix_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
 
 # ================= START COMMAND =================
 @app.on_message(filters.command("start"))
