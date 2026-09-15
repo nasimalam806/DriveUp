@@ -59,8 +59,10 @@ async def handle_document(client, message):
     raw_caption = message.caption if message.caption else ""
     parsed_book_name = ""
     parsed_author_name = ""
+    is_caption_provided = False
 
     if raw_caption:
+        is_caption_provided = True
         # Split caption by newlines (\n)
         lines = [line.strip() for line in raw_caption.split('\n') if line.strip()]
         if len(lines) > 1:
@@ -70,6 +72,7 @@ async def handle_document(client, message):
         else:
             parsed_book_name = lines[0] if lines else ""
 
+    # Agar caption nahi diya, toh original file name use karo
     temp_name = parsed_book_name if parsed_book_name else original_name
 
     # ================= AUTOMATIC RENAME & FOLDER LOGIC =================
@@ -81,12 +84,20 @@ async def handle_document(client, message):
     else:
         base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
     
+    # Agar caption nahi hai, toh file name ke underscores (_) ko spaces ( ) mein badal do AI search ke liye
+    if not is_caption_provided:
+        base_name_without_ext = base_name_without_ext.replace("_", " ")
+
+    # Yahan 'drive_file_name' mein tag add hoga jo sirf Drive pe dikhega
     if is_book:
-        final_name = f"{base_name_without_ext} @BooksBunch{extension}"
+        drive_file_name = f"{base_name_without_ext} @BooksBunch{extension}"
         target_folder_id = DRIVE_FOLDER_BOOKS
     else:
-        final_name = f"{base_name_without_ext} @FullModApk{extension}"
+        drive_file_name = f"{base_name_without_ext} @FullModApk{extension}"
         target_folder_id = DRIVE_FOLDER_APPS
+        
+    # 'website_title' tag-free rahega jo Firebase aur Webhook me jayega
+    website_title = base_name_without_ext
     # ==========================================================
 
     # 2. Download File to Server (Railway)
@@ -99,7 +110,7 @@ async def handle_document(client, message):
     # 3. Upload to Google Drive
     try:
         drive_service = get_drive_service()
-        file_metadata = {'name': final_name, 'parents': [target_folder_id]}
+        file_metadata = {'name': drive_file_name, 'parents': [target_folder_id]}
         media = MediaFileUpload(file_path, resumable=True)
         
         uploaded_file = drive_service.files().create(
@@ -215,7 +226,8 @@ async def handle_document(client, message):
     
     payload = {
         "fields": {
-            "title": {"stringValue": final_name.rsplit('.', 1)[0]},
+            # Yahan website_title use kiya hai (bina tag ke)
+            "title": {"stringValue": website_title},
             "type": {"stringValue": file_type},
             "status": {"stringValue": "live"},
             "thumbnailUrl": {"stringValue": thumbnail_url},
@@ -247,7 +259,7 @@ async def handle_document(client, message):
             
             if target_webhook:
                 webhook_payload = {
-                    "title": final_name.rsplit('.', 1)[0],
+                    "title": website_title, # Yahan bhi bina tag ka title jayega
                     "profilePicture": thumbnail_url,
                     "description": final_description,
                     "category": category,
