@@ -3,6 +3,7 @@ import requests
 import asyncio
 from datetime import datetime
 from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -10,8 +11,8 @@ import urllib.parse
 
 # ================= CREDENTIALS =================
 BOT_TOKEN = "8067333157:AAGrEAEeYqKX4CFyT0nOzNvJYi69dSSSrQs"
-API_ID = 30072361  # Yahan apna API ID daalein
-API_HASH = "89172ae56cce451a933e4aa2557c1721" # Yahan apna API HASH daalein
+API_ID = 30072361  
+API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
 DRIVE_FOLDER_ID = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
 SERVICE_ACCOUNT_FILE = "credentials.json"
@@ -24,7 +25,7 @@ def get_drive_service():
 
 app = Client("filevix_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# 👇 YEH NAYA FUNCTION ADD KAREIN 👇
+# ================= START COMMAND =================
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
     welcome_text = (
@@ -33,14 +34,9 @@ async def start_command(client, message):
         "**Kaise use karein?**\n"
         "Bas mujhe koi bhi APK ya PDF file bhejein, aur main baaki ka sara kaam khud sambhal lunga! 🔥"
     )
-    await message.reply_text(welcome_text, parse_mode="Markdown")
-# 👆 YAHAN TAK 👆
+    await message.reply_text(welcome_text, parse_mode=ParseMode.MARKDOWN)
 
-@app.on_message(filters.document)
-async def handle_document(client, message):
-# ... baaki ka aapka upload wala code same rahega ...
-
-
+# ================= DOCUMENT UPLOAD LOGIC =================
 @app.on_message(filters.document)
 async def handle_document(client, message):
     msg = await message.reply_text("⏳ Downloading file to server (0%)...")
@@ -185,13 +181,13 @@ async def handle_document(client, message):
     try:
         fb_res = requests.post(firestore_url, json=payload)
         if fb_res.status_code == 200:
-            await msg.edit_text(f"✅ *Upload & Auto-Publish Successful!*\n\n🔗 *Drive Link:* {drive_link}", parse_mode="Markdown")
+            await msg.edit_text(f"✅ *Upload & Auto-Publish Successful!*\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
         else:
-            await msg.edit_text(f"⚠️ Drive Uploaded, but Website Publish Failed.\nError: {fb_res.text}\n\n🔗 *Drive Link:* {drive_link}", parse_mode="Markdown")
+            await msg.edit_text(f"⚠️ Drive Uploaded, but Website Publish Failed.\nError: {fb_res.text}\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         await msg.edit_text(f"❌ Publish Error: {str(e)}")
 
-# Progress bar helper function
+# ================= PROGRESS BAR HELPER =================
 async def update_progress(message, current, total, text):
     percent = round((current / total) * 100)
     # Update message every 10% to avoid Telegram rate limits
