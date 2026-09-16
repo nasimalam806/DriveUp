@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 import asyncio
 import urllib.parse
@@ -9,29 +10,29 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# ================= TELEGRAM CREDENTIALS =================
-BOT_TOKEN = "8547801130:AAGhHdvjPSXz5knO3uPq7JSHoJtF5R4tXnE" 
-API_ID = 30072361  
-API_HASH = "89172ae56cce451a933e4aa2557c1721" 
+# ================= TELEGRAM CREDENTIALS (SECURE WAY) =================
+# Ab hum keys direct nahi likhenge, OS se fetch karenge
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+API_ID = int(os.environ.get("API_ID"))
+API_HASH = os.environ.get("API_HASH")
 
-# ================= SEPARATE DRIVE FOLDERS =================
-# Books (PDFs) ke liye folder
-DRIVE_FOLDER_BOOKS = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
-# Apps/Games (APKs) ke liye folder
-DRIVE_FOLDER_APPS = "1WFPmfn2vYilb5E0wji1nvt-gOXxrn7YF"
-
-# ================= WEBHOOK URLs =================
-APP_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqjzqyLNDavnrkBzracrX7a4WEF48wEVVGItXK2234EB2ROq_oEKo1ytLDQfhEGKDUio828gkayIVKI7_sXaeEC1CdTI7efWde1QDYdGGObh75dwSknt16LxwLjzAykqavOU4UFoXDOZeWRJsUKSFOSbD1flwXpPHZcSYpINz7IyqxqcvRLCeeU2oFFbX1NAYC0KvFUb25YiI-QMZxwEX9WAhxFA%3D%3D" 
-BOOK_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqj9SrqSkD8sQnaW3Tx12hEwvoEv4Kw3yGmZABailfSsXmYlgJcf5YIdMEJj81-QADwB6CxF1AhVL6KsWERs8Eby7Z9F2HbGyBsdak57LWs6eHHkNZnOGxXJWlUCPuPpnB73mKTaHed1Kd2CpY3vH6NeMiHEN_or5F-RqprsxtxiZ8XiG_wldjhhpzRk51y62N3yS5vEpqmQJ6-8YI-fgLUApLwg%3D%3D" 
-
-# ================= DRIVE SETUP (OAUTH 2.0) =================
+# ================= DRIVE SETUP (SECURE OAUTH 2.0) =================
 def get_drive_service():
     scopes = ['https://www.googleapis.com/auth/drive']
-    creds = Credentials.from_authorized_user_file('token.json', scopes)
+    
+    # token.json file ki jagah Railway ke variable se token padhenge
+    token_data = os.environ.get("GOOGLE_TOKEN_JSON")
+    
+    if token_data:
+        creds_dict = json.loads(token_data)
+        creds = Credentials.from_authorized_user_info(creds_dict, scopes)
+    else:
+        # Local test ke liye fallback
+        creds = Credentials.from_authorized_user_file('token.json', scopes)
+        
     return build('drive', 'v3', credentials=creds)
 
 app = Client(":memory:", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
-
 # ================= START COMMAND =================
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
