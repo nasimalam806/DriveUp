@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # ================= TELEGRAM CREDENTIALS =================
-BOT_TOKEN = "8547801130:AAFWBuKPndjHRIVRMz1P_J2F5C0PtN3XFQ4" 
+BOT_TOKEN = "8547801130:AAGhHdvjPSXz5knO3uPq7JSHoJtF5R4tXnE" 
 API_ID = 30072361  
 API_HASH = "89172ae56cce451a933e4aa2557c1721" 
 
@@ -84,9 +84,11 @@ async def handle_document(client, message):
     else:
         base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
     
-    # Agar caption nahi hai, toh file name ke underscores (_) ko spaces ( ) mein badal do AI search ke liye
+    # AI Clean-up: Agar caption nahi hai, toh _, -, aur . ko spaces me replace karo
     if not is_caption_provided:
-        base_name_without_ext = base_name_without_ext.replace("_", " ")
+        base_name_without_ext = base_name_without_ext.replace("_", " ").replace("-", " ").replace(".", " ")
+        # Multiple spaces ko single space banao
+        base_name_without_ext = " ".join(base_name_without_ext.split())
 
     # Yahan 'drive_file_name' mein tag add hoga jo sirf Drive pe dikhega
     if is_book:
