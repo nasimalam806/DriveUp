@@ -11,28 +11,35 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # ================= TELEGRAM CREDENTIALS (SECURE WAY) =================
-# Ab hum keys direct nahi likhenge, OS se fetch karenge
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 
+# ================= DRIVE FOLDERS (Added back) =================
+# Books (PDFs) ke liye folder
+DRIVE_FOLDER_BOOKS = "1Wh0TObV5uqL8S7TBopGUbgfT63nwB9-7"
+# Apps/Games (APKs) ke liye folder
+DRIVE_FOLDER_APPS = "1WFPmfn2vYilb5E0wji1nvt-gOXxrn7YF"
+
+# ================= WEBHOOK URLs (Added back) =================
+APP_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqjzqyLNDavnrkBzracrX7a4WEF48wEVVGItXK2234EB2ROq_oEKo1ytLDQfhEGKDUio828gkayIVKI7_sXaeEC1CdTI7efWde1QDYdGGObh75dwSknt16LxwLjzAykqavOU4UFoXDOZeWRJsUKSFOSbD1flwXpPHZcSYpINz7IyqxqcvRLCeeU2oFFbX1NAYC0KvFUb25YiI-QMZxwEX9WAhxFA%3D%3D" 
+BOOK_WEBHOOK_URL = "https://api.telebotcreator.com/new-webhook?data=gAAAAABqj9SrqSkD8sQnaW3Tx12hEwvoEv4Kw3yGmZABailfSsXmYlgJcf5YIdMEJj81-QADwB6CxF1AhVL6KsWERs8Eby7Z9F2HbGyBsdak57LWs6eHHkNZnOGxXJWlUCPuPpnB73mKTaHed1Kd2CpY3vH6NeMiHEN_or5F-RqprsxtxiZ8XiG_wldjhhpzRk51y62N3yS5vEpqmQJ6-8YI-fgLUApLwg%3D%3D" 
+
 # ================= DRIVE SETUP (SECURE OAUTH 2.0) =================
 def get_drive_service():
     scopes = ['https://www.googleapis.com/auth/drive']
-    
-    # token.json file ki jagah Railway ke variable se token padhenge
     token_data = os.environ.get("GOOGLE_TOKEN_JSON")
     
     if token_data:
         creds_dict = json.loads(token_data)
         creds = Credentials.from_authorized_user_info(creds_dict, scopes)
     else:
-        # Local test ke liye fallback
         creds = Credentials.from_authorized_user_file('token.json', scopes)
         
     return build('drive', 'v3', credentials=creds)
 
 app = Client(":memory:", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
+
 # ================= START COMMAND =================
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
@@ -64,34 +71,27 @@ async def handle_document(client, message):
 
     if raw_caption:
         is_caption_provided = True
-        # Split caption by newlines (\n)
         lines = [line.strip() for line in raw_caption.split('\n') if line.strip()]
         if len(lines) > 1:
-            # Last line becomes Author, everything above it becomes Book Name
             parsed_author_name = lines[-1]
             parsed_book_name = " ".join(lines[:-1])
         else:
             parsed_book_name = lines[0] if lines else ""
 
-    # Agar caption nahi diya, toh original file name use karo
     temp_name = parsed_book_name if parsed_book_name else original_name
 
     # ================= AUTOMATIC RENAME & FOLDER LOGIC =================
     is_book = ".pdf" in original_name.lower() or ".epub" in original_name.lower()
     
-    # Agar temp_name mein extension aa gaya hai toh usko hatao
     if temp_name.lower().endswith(extension.lower()):
         base_name_without_ext = temp_name[:-len(extension)].strip()
     else:
         base_name_without_ext = temp_name.rsplit('.', 1)[0].strip()
     
-    # AI Clean-up: Agar caption nahi hai, toh _, -, aur . ko spaces me replace karo
     if not is_caption_provided:
         base_name_without_ext = base_name_without_ext.replace("_", " ").replace("-", " ").replace(".", " ")
-        # Multiple spaces ko single space banao
         base_name_without_ext = " ".join(base_name_without_ext.split())
 
-    # Yahan 'drive_file_name' mein tag add hoga jo sirf Drive pe dikhega
     if is_book:
         drive_file_name = f"{base_name_without_ext} @BooksBunch{extension}"
         target_folder_id = DRIVE_FOLDER_BOOKS
@@ -99,11 +99,9 @@ async def handle_document(client, message):
         drive_file_name = f"{base_name_without_ext} @FullModApk{extension}"
         target_folder_id = DRIVE_FOLDER_APPS
         
-    # 'website_title' tag-free rahega jo Firebase aur Webhook me jayega
     website_title = base_name_without_ext
-    # ==========================================================
 
-    # 2. Download File to Server (Railway)
+    # 2. Download File to Server
     file_path = await message.download(
         progress=lambda current, total: update_progress(msg, current, total, "Downloading to server")
     )
@@ -125,7 +123,6 @@ async def handle_document(client, message):
         file_id = uploaded_file.get('id')
         drive_link = uploaded_file.get('webViewLink')
         
-        # Make file public so users can download it
         drive_service.permissions().create(
             fileId=file_id, 
             body={'type': 'anyone', 'role': 'reader'}
@@ -136,17 +133,15 @@ async def handle_document(client, message):
         if os.path.exists(file_path): os.remove(file_path)
         return
         
-    # Delete from Railway server to save space
     if os.path.exists(file_path):
         os.remove(file_path)
         
     await msg.edit_text("✅ Drive Upload Done! Fetching AI Details & Publishing...")
 
-    # 4. AI Logic (Fetch Metadata and Images)
+    # 4. AI Logic
     file_type = "book" if is_book else "app"
     ai_search_name = base_name_without_ext 
     
-    # AI Search Prompt ke liye Author ko jodo
     ai_query_string = ai_search_name
     if is_book and parsed_author_name:
         ai_query_string += f" {parsed_author_name}"
@@ -192,17 +187,17 @@ async def handle_document(client, message):
     cat_list_str = valid_cats_book if is_book else valid_cats_app
     type_text_display = "book" if is_book else "app"
     
-    # Text Prompts mein bhi Author ka use kiya gaya hai agar available ho
+    # Prompt me explicitly limit mention kardi taki AI thoda chota generate kare
     if is_book:
         desc_prompt = f'Write a short, engaging, and SEO friendly book summary/description for the book named: "{ai_search_name}"'
         if parsed_author_name: desc_prompt += f' written by {parsed_author_name}'
-        desc_prompt += '. Return strictly in plain text without any markdown symbols like asterisks (**).'
+        desc_prompt += '. Keep it under 650 characters. Return strictly in plain text without any markdown symbols like asterisks (**).'
         
         cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the book named: "{ai_search_name}"'
         if parsed_author_name: cat_prompt += f' by {parsed_author_name}'
         cat_prompt += '. Return ONLY the exact category name from the list, no extra text.'
     else:
-        desc_prompt = f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {ai_search_name}. Return strictly in plain text without any markdown symbols like asterisks (**).'
+        desc_prompt = f'Write 3 to 4 realistic Mod Features (like Premium Unlocked, Unlimited Money, No Ads, etc.) as bullet points, and then write a short, engaging, and SEO friendly description for the app named: {ai_search_name}. Keep it under 650 characters. Return strictly in plain text without any markdown symbols like asterisks (**).'
         cat_prompt = f'From this list [{cat_list_str}], pick exactly 1 most relevant category for the {type_text_display} named: {ai_search_name}. Return ONLY the exact category name from the list, no extra text.'
 
     raw_desc = "Generated description."
@@ -221,6 +216,12 @@ async def handle_document(client, message):
     except: pass
 
     final_description = raw_desc if is_book else f"⭐ Mod Features & Details:\n\n{raw_desc}"
+    
+    # 🔥 YAHAN HUA HAI MAX 735 CHARACTERS WALA CHANGE 🔥
+    # Agar AI ne thoda bada description de diya, toh usko 735 character tak cut kar denge
+    if len(final_description) > 735:
+        # Cut karne ke baad end me "..." laga denge taaki incomplete na lage
+        final_description = final_description[:732] + "..."
 
     # 5. Firebase Publish
     firestore_url = "https://firestore.googleapis.com/v1/projects/filevix/databases/(default)/documents/files"
@@ -229,7 +230,6 @@ async def handle_document(client, message):
     
     payload = {
         "fields": {
-            # Yahan website_title use kiya hai (bina tag ke)
             "title": {"stringValue": website_title},
             "type": {"stringValue": file_type},
             "status": {"stringValue": "live"},
@@ -246,7 +246,6 @@ async def handle_document(client, message):
         }
     }
     
-    # Agar author name hai toh usko bhi Firebase mein save karein
     if parsed_author_name:
         payload["fields"]["author"] = {"stringValue": parsed_author_name}
 
@@ -257,23 +256,21 @@ async def handle_document(client, message):
             doc_id = fb_res.json().get('name').split('/')[-1]
             await msg.edit_text(f"✅ *Upload & Auto-Publish Successful!*\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
             
-            # ================= WEBHOOK TRIGGER LOGIC =================
             target_webhook = BOOK_WEBHOOK_URL if is_book else APP_WEBHOOK_URL
             
             if target_webhook:
                 webhook_payload = {
-                    "title": website_title, # Yahan bhi bina tag ka title jayega
+                    "title": website_title,
                     "profilePicture": thumbnail_url,
                     "description": final_description,
                     "category": category,
                     "downloadLink": f"https://filevix.blogspot.com/?id={doc_id}",
-                    "author": parsed_author_name # Webhook me bhi author add kar diya
+                    "author": parsed_author_name
                 }
                 try:
                     requests.post(target_webhook, json=webhook_payload)
                 except Exception as e:
                     print(f"Webhook Failed: {e}")
-            # ==========================================================
             
         else:
             await msg.edit_text(f"⚠️ Drive Uploaded, but Website Publish Failed.\nError: {fb_res.text}\n\n🔗 *Drive Link:* {drive_link}", parse_mode=ParseMode.MARKDOWN)
